@@ -21,10 +21,14 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
 
 # Screen setup
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Breakout Game")
+
+# Font setup
+font = pygame.font.SysFont(None, 36)
 
 # Platform class
 class Platform:
@@ -61,11 +65,20 @@ class Ball:
     def draw(self):
         pygame.draw.ellipse(screen, RED, self.rect)
 
-# Block class with color
+# Block class with color and hit points
 class Block:
     def __init__(self, x, y, color):
         self.rect = pygame.Rect(x, y, BLOCK_WIDTH, BLOCK_HEIGHT)
         self.color = color
+        self.hit_points = 3 if color == RED else 1
+
+    def hit(self):
+        self.hit_points -= 1
+        if self.color == RED:
+            fade_amount = 85  # 255 / 3 hits = 85
+            new_red_value = max(0, self.color[0] - fade_amount)
+            self.color = (new_red_value, 0, 0)
+        return self.hit_points <= 0
 
     def draw(self):
         pygame.draw.rect(screen, self.color, self.rect)
@@ -75,13 +88,16 @@ block_colors = [RED, GREEN, BLUE, WHITE]
 blocks = []
 for i in range(5):
     for j in range(10):
-        color = block_colors[i % len(block_colors)]
+        if i == 4:
+            color = YELLOW
+        else:
+            color = block_colors[i % len(block_colors)]
         blocks.append(Block(j * (BLOCK_WIDTH + 10) + 35, i * (BLOCK_HEIGHT + 10) + 50, color))
 
 # Main game loop
 def main():
     platform = Platform()
-    ball = Ball()
+    balls = [Ball()]
     lives = LIVES
     clock = pygame.time.Clock()
 
@@ -99,26 +115,32 @@ def main():
         if keys[pygame.K_d]:
             platform.move("right")
 
-        ball.move()
+        for ball in balls[:]:
+            ball.move()
 
-        # Ball collision with platform
-        if ball.rect.colliderect(platform.rect):
-            ball.dy = -ball.dy
-
-        # Ball collision with blocks
-        for block in blocks[:]:
-            if ball.rect.colliderect(block.rect):
+            # Ball collision with platform
+            if ball.rect.colliderect(platform.rect):
                 ball.dy = -ball.dy
-                blocks.remove(block)
 
-        # Ball falls below platform
-        if ball.rect.bottom >= SCREEN_HEIGHT:
-            lives -= 1
-            ball = Ball()
-            if lives == 0:
-                print("Game Over")
-                pygame.quit()
-                sys.exit()
+            # Ball collision with blocks
+            for block in blocks[:]:
+                if ball.rect.colliderect(block.rect):
+                    ball.dy = -ball.dy
+                    if block.hit():
+                        blocks.remove(block)
+                        if block.color == WHITE:
+                            balls.append(Ball())
+
+            # Ball falls below platform
+            if ball.rect.bottom >= SCREEN_HEIGHT:
+                balls.remove(ball)
+                if not balls:
+                    lives -= 1
+                    if lives == 0:
+                        print("Game Over")
+                        pygame.quit()
+                        sys.exit()
+                    balls.append(Ball())
 
         # Win condition
         if not blocks:
@@ -127,9 +149,14 @@ def main():
             sys.exit()
 
         platform.draw()
-        ball.draw()
+        for ball in balls:
+            ball.draw()
         for block in blocks:
             block.draw()
+
+        # Display lives
+        lives_text = font.render(f'Lives: {lives}', True, WHITE)
+        screen.blit(lives_text, (SCREEN_WIDTH - 100, 10))
 
         pygame.display.flip()
         clock.tick(60)
