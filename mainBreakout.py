@@ -61,19 +61,22 @@ class Ball:
     def draw(self):
         pygame.draw.ellipse(screen, RED, self.rect)
 
-# Block class
+# Block class with color
 class Block:
-    def __init__(self, x, y):
+    def __init__(self, x, y, color):
         self.rect = pygame.Rect(x, y, BLOCK_WIDTH, BLOCK_HEIGHT)
+        self.color = color
 
     def draw(self):
-        pygame.draw.rect(screen, GREEN, self.rect)
+        pygame.draw.rect(screen, self.color, self.rect)
 
-# Create blocks
+# Create blocks with different colors
+block_colors = [RED, GREEN, BLUE, WHITE]
 blocks = []
 for i in range(5):
     for j in range(10):
-        blocks.append(Block(j * (BLOCK_WIDTH + 10) + 35, i * (BLOCK_HEIGHT + 10) + 50))
+        color = block_colors[i % len(block_colors)]
+        blocks.append(Block(j * (BLOCK_WIDTH + 10) + 35, i * (BLOCK_HEIGHT + 10) + 50, color))
 
 # Main game loop
 def main():
